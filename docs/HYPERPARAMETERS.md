@@ -28,6 +28,17 @@ The submitted PDF is the source of truth for the paper-level claims. The bundled
 | Inference | repaired recognizer only; ordinary beam search; no comparator and no test-time reranking |
 | Projection strength | language-specific lambda is solved by one-dimensional bisection; it is not tuned as a temperature |
 
+
+## Recovered historical settings from the supplied research archives
+
+A static audit found a substantial earlier **three-seed** experiment lineage (seeds 2027–2029) with additional protocol details. Because the submitted PDF reports **five seeds** and different headline numbers, these historical values are **not being promoted to final paper-scale config values** without the missing final-run lineage.
+
+The main recovered candidates include: LoRA rank 8 in 120 decoder projections; 1,916,928 trainable parameters; 490 CL adaptation updates with batch 8, AdamW, LR 1e-4; a historical checkpoint grid of 0/16/32/48/64/256/457/490; max generation length 128; 64 repair updates with a historically selected LR 1.25e-5; and historical CL/FLEURS pool sizes and checkpoint grids.
+
+Some of these are corroborated by historical JSON metadata (for example beam 8, max generation length 128, P checkpoint step 490, and checkpoint/result names containing `lr1p25e5`), while others appear only in the earlier manuscript source.
+
+See `docs/ASSET_AUDIT.md` for the field-by-field evidence classification and the exact remaining gaps.
+
 ## Required for exact reproduction but not stated in the submitted 5-page PDF
 
 The following values should be released from the **verified final paper runs** before this repository claims exact end-to-end reproduction:

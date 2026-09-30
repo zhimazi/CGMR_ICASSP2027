@@ -16,6 +16,7 @@ The submitted PDF is treated as the source of truth for reported paper numbers.
 - `paper_results/fig4_repairability_contrasts.csv` — Fig. 4 state-A vs state-D annotated contrasts.
 - `docs/HYPERPARAMETERS.md` — what the 5-page paper specifies, what it omits, and what must be released for exact reproduction.
 - `docs/PAPER_REPRODUCTION.md` — claim-to-code/result map and current reproduction status.
+- `docs/ASSET_AUDIT.md` — audit of recovered historical experiment assets and unresolved final-run lineage.
 
 **Important:** the Common Voice 15.0 micro experiment under `examples/` is an implementation sanity check, not a substitute for the paper-scale CL-MASR/FLEURS results.
 
@@ -88,7 +89,8 @@ CGMR_ICASSP2027/
 └── docs/
     ├── REPRODUCIBILITY.md
     ├── HYPERPARAMETERS.md
-    └── PAPER_REPRODUCTION.md
+    ├── PAPER_REPRODUCTION.md
+    └── ASSET_AUDIT.md
 ```
 
 Do **not** commit local audio, model weights, feature caches, absolute-path manifests, temporary LaTeX files, or large experiment directories.
