@@ -4,7 +4,20 @@ Research code accompanying **“When Recognition Fails Before Competitive Hypoth
 
 CGMR studies catastrophic forgetting in continual multilingual ASR from a process perspective. Under finite-beam decoding, an old-language utterance can become worse at 1-best recognition while a baseline-competitive hypothesis is still present in the beam. CGMR uses this **ranking-accessible** regime as a repair window: it minimally revises the posterior over accessible candidates using a pre-adaptation comparator, then amortizes the repaired targets back into a single recognizer. Inference uses ordinary beam search and does not require the comparator or test-time reranking.
 
-> **Release status.** The current public code is a **minimal executable reference / sanity-check implementation** of the core CGMR repair procedure using Whisper-small and a small Common Voice 15.0 panel. It is **not an exact reproduction of the paper-scale CL-MASR/FLEURS experiments**. Paper-scale experiment scripts, manifests, and cross-backbone configs should only be marked as reproducible after they are recovered and verified.
+> **Release status.** This repository now provides (i) the core executable CGMR implementation and micro sanity check, and (ii) machine-readable transcriptions of the submitted paper's main numerical results. It is **not yet an exact end-to-end reproduction of the paper-scale CL-MASR/FLEURS experiments** because the complete verified final-run configs, manifests, and raw per-seed lineage have not all been recovered.
+
+## Submitted-paper artifacts
+
+The submitted PDF is treated as the source of truth for reported paper numbers.
+
+- `paper_results/table1_temporal_diagnosis.csv` — submitted Table 1.
+- `paper_results/table2_retention_adaptation.csv` — submitted Table 2.
+- `paper_results/table3_ablation.csv` — submitted Table 3.
+- `paper_results/fig4_repairability_contrasts.csv` — Fig. 4 state-A vs state-D annotated contrasts.
+- `docs/HYPERPARAMETERS.md` — what the 5-page paper specifies, what it omits, and what must be released for exact reproduction.
+- `docs/PAPER_REPRODUCTION.md` — claim-to-code/result map and current reproduction status.
+
+**Important:** the Common Voice 15.0 micro experiment under `examples/` is an implementation sanity check, not a substitute for the paper-scale CL-MASR/FLEURS results.
 
 ## Method at a glance
 
@@ -51,6 +64,7 @@ CGMR_ICASSP2027/
 ├── LICENSE
 ├── .gitignore
 ├── requirements.txt
+├── CITATION.cff
 ├── configs/
 │   └── micro_cv15_seed2027.json
 ├── scripts/
@@ -65,8 +79,16 @@ CGMR_ICASSP2027/
 ├── examples/
 │   ├── seed2027_final_summary.json
 │   └── seed2027_provenance.json
+├── paper_results/
+│   ├── README.md
+│   ├── table1_temporal_diagnosis.csv
+│   ├── table2_retention_adaptation.csv
+│   ├── table3_ablation.csv
+│   └── fig4_repairability_contrasts.csv
 └── docs/
-    └── REPRODUCIBILITY.md
+    ├── REPRODUCIBILITY.md
+    ├── HYPERPARAMETERS.md
+    └── PAPER_REPRODUCTION.md
 ```
 
 Do **not** commit local audio, model weights, feature caches, absolute-path manifests, temporary LaTeX files, or large experiment directories.
@@ -220,7 +242,9 @@ This configuration is deliberately smaller than the manuscript experiments.
 
 ## Relation to the paper experiments
 
-The paper evaluates the forgetting process and CGMR on CL-MASR and FLEURS, primarily with Whisper-small, and also reports cross-backbone experiments with OWSM v3.1-small and SeamlessM4T-v2-Large. The manuscript's default beam size is 8.
+The paper evaluates the forgetting process and CGMR on CL-MASR and FLEURS, primarily with Whisper-small, and also reports cross-backbone experiments with OWSM v3.1-small and SeamlessM4T-v2-Large. The manuscript's default beam size is 8 with zero length penalty, and reported results are mean ± standard deviation across five seeds.
+
+The exact values printed in the submitted paper are archived under `paper_results/`. See `docs/HYPERPARAMETERS.md` for the distinction between settings stated in the paper and settings that must still be recovered from the final paper-scale run lineage.
 
 The current minimal public implementation should therefore be interpreted as **method code plus an executable sanity check**, not as a claim that every paper table is reproducible from this release.
 

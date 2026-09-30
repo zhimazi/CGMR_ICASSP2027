@@ -1,0 +1,4 @@
+setting,censored_percent,ranking_first_percent,ranking_first_ci_low,ranking_first_ci_high,psi_std_pp,psi_std_ci_low,psi_std_ci_high
+CL-MASR,28.8,82.86,79.72,85.94,16.66,6.77,26.77
+CL-MASR + ER,44.4,81.46,77.70,84.99,-32.52,-44.68,-21.40
+FLEURS,35.7,86.73,83.66,89.55,13.21,4.18,22.33

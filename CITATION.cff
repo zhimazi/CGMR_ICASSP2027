@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the accompanying manuscript."
+title: "CGMR: Comparator-Guided Minimum-Information Repair"
+type: software
+authors:
+  - family-names: Zhang
+    given-names: Peihong
+  - family-names: Zhou
+    given-names: Mingzhuo
+  - family-names: Li
+    given-names: Shuyu
+  - family-names: Li
+    given-names: Shengchen
+repository-code: "https://github.com/zhimazi/CGMR_ICASSP2027"
+date-released: "2026-09-30"
