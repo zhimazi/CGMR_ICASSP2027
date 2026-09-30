@@ -2,78 +2,65 @@
 
 Research code accompanying **“When Recognition Fails Before Competitive Hypotheses Disappear: Rethinking Catastrophic Forgetting in Continual Multilingual ASR.”**
 
-CGMR studies catastrophic forgetting in continual multilingual ASR from a process perspective. Under finite-beam decoding, an old-language utterance can become worse at 1-best recognition while a baseline-competitive hypothesis is still present in the beam. CGMR uses this **ranking-accessible** regime as a repair window: it minimally revises the posterior over accessible candidates using a pre-adaptation comparator, then amortizes the repaired targets back into a single recognizer. Inference uses ordinary beam search and does not require the comparator or test-time reranking.
+CGMR studies catastrophic forgetting in continual multilingual ASR from a process perspective. Under finite-beam decoding, recognition can regress while a comparator-competitive hypothesis is still accessible in the beam. CGMR uses this ranking-accessible regime as a repair window: it minimally revises the posterior over accessible candidates using a pre-adaptation comparator, then amortizes the repaired targets back into a single recognizer. Inference uses ordinary beam search and does not require the comparator or test-time reranking.
 
-> **Release status.** This repository now provides (i) the core executable CGMR implementation and micro sanity check, and (ii) machine-readable transcriptions of the submitted paper's main numerical results. It is **not yet an exact end-to-end reproduction of the paper-scale CL-MASR/FLEURS experiments** because the complete verified final-run configs, manifests, and raw per-seed lineage have not all been recovered.
+## What this repository provides
 
-## Submitted-paper artifacts
+This release contains four complementary pieces:
 
-The submitted PDF is treated as the source of truth for reported paper numbers.
+- **Core method implementation** for N/A/D state assignment, comparator-budgeted posterior projection, language-level bisection, and CGMR amortization.
+- **Experimental protocol and hyperparameters** documented in `docs/HYPERPARAMETERS.md`.
+- **Machine-readable paper results** for Tables 1–3 and Fig. 4 under `paper_results/`.
+- **Executable validation example** on a compact Common Voice 15.0 setup for checking the implementation path end to end.
 
-- `paper_results/table1_temporal_diagnosis.csv` — submitted Table 1.
-- `paper_results/table2_retention_adaptation.csv` — submitted Table 2.
-- `paper_results/table3_ablation.csv` — submitted Table 3.
-- `paper_results/fig4_repairability_contrasts.csv` — Fig. 4 state-A vs state-D annotated contrasts.
-- `docs/HYPERPARAMETERS.md` — what the 5-page paper specifies, what it omits, and what must be released for exact reproduction.
-- `docs/PAPER_REPRODUCTION.md` — claim-to-code/result map and current reproduction status.
-- `docs/ASSET_AUDIT.md` — audit of recovered historical experiment assets and unresolved final-run lineage.
-
-**Important:** the Common Voice 15.0 micro experiment under `examples/` is an implementation sanity check, not a substitute for the paper-scale CL-MASR/FLEURS results.
+The repository is intended as a reference implementation and experimental record for the manuscript. Large training artifacts such as dataset audio, model checkpoints, feature caches, and machine-specific manifests are not redistributed.
 
 ## Method at a glance
 
-For an old-language utterance, let the pre-adaptation comparator define a baseline edit count `b_i`. Let the adapted model produce a beam candidate set. We distinguish three states:
+For an old-language utterance, let the pre-adaptation comparator define a baseline edit count `b_i`. Let the adapted model produce a finite beam candidate set. We distinguish three states:
 
-- **N**: the adapted 1-best is comparator-competitive.
-- **A**: the adapted 1-best is worse than the comparator, but a comparator-competitive candidate is still accessible in the beam.
+- **N**: the adapted 1-best remains comparator-competitive.
+- **A**: the adapted 1-best is worse than the comparator, but a comparator-competitive candidate remains in the beam.
 - **D**: no comparator-competitive candidate remains in the beam.
 
-CGMR repairs only state-A samples. For each old-language cohort, it finds the minimum-KL posterior revision satisfying a comparator-defined aggregate edit budget. The projected candidate posterior has the form
+CGMR repairs state-A samples. For each old-language cohort, it finds the minimum-KL posterior revision satisfying a comparator-defined aggregate edit budget:
 
 ```text
-q_i*(h) ∝ p_i(h) exp(-lambda_l * d_i(h)),
+q_i*(h) ∝ p_i(h) exp(-lambda_l * d_i(h))
 ```
 
-where `lambda_l` is solved by one-dimensional bisection for each language. The projected old-language targets are then trained jointly with teacher-forced current-language CE, yielding one repaired recognizer.
+The language-specific `lambda_l` is solved by one-dimensional bisection. Projected old-language targets are then combined with current-language teacher-forced CE, producing a single repaired recognizer.
 
-## What is implemented in the minimal release
+## Paper results
 
-The current executable pipeline includes:
+The values reported in the submitted manuscript are available in machine-readable form:
 
-- Whisper-small with LoRA adaptation.
-- Custom locale-token handling for `fy-NL` and `ia` following the CL-MASR-style setup used in the validation code.
-- Deterministic data-panel construction from Common Voice 15.0.
-- Experience replay (ER) adaptation.
-- Beam-8 candidate extraction.
-- Exact teacher-forced sequence log-probabilities including EOS.
-- State-A sample selection using comparator error, adapted 1-best error, and beam oracle error.
-- Language-level comparator edit budgets.
-- Minimum-KL / Gibbs-tilt posterior projection.
-- Per-language bisection for `lambda_l`.
-- CGMR amortization with old/current loss balancing.
-- Endpoint WER/CER evaluation and paired bootstrap summaries.
+```text
+paper_results/
+├── table1_temporal_diagnosis.csv
+├── table2_retention_adaptation.csv
+├── table3_ablation.csv
+└── fig4_repairability_contrasts.csv
+```
 
-The minimal pipeline is intentionally small enough to serve as an executable implementation check. It should not be used as the source of the paper's main numerical tables.
+See `docs/PAPER_REPRODUCTION.md` for the mapping between manuscript claims, code, and released result artifacts.
 
 ## Repository layout
-
-The minimum public repository should look like this:
 
 ```text
 CGMR_ICASSP2027/
 ├── README.md
 ├── LICENSE
-├── .gitignore
-├── requirements.txt
 ├── CITATION.cff
+├── requirements.txt
+├── cgmr/
+│   ├── __init__.py
+│   └── projection.py
 ├── configs/
 │   └── micro_cv15_seed2027.json
 ├── scripts/
 │   ├── prepare_cv15_subset.py
 │   └── run_er_cgmr_micro.py
-├── cgmr/
-│   ├── __init__.py
-│   └── projection.py
 ├── tests/
 │   ├── test_state.py
 │   └── test_projection.py
@@ -87,17 +74,14 @@ CGMR_ICASSP2027/
 │   ├── table3_ablation.csv
 │   └── fig4_repairability_contrasts.csv
 └── docs/
-    ├── REPRODUCIBILITY.md
     ├── HYPERPARAMETERS.md
     ├── PAPER_REPRODUCTION.md
-    └── ASSET_AUDIT.md
+    └── REPRODUCIBILITY.md
 ```
-
-Do **not** commit local audio, model weights, feature caches, absolute-path manifests, temporary LaTeX files, or large experiment directories.
 
 ## Installation
 
-The validation environment used Python 3.12 with CUDA. A tested software stack was:
+The executable validation was checked with Python 3.12 and the following software stack:
 
 ```text
 torch 2.8.0
@@ -113,35 +97,35 @@ safetensors 0.6.2
 sentencepiece 0.2.1
 ```
 
-Create an environment, install a PyTorch build compatible with your CUDA version, then install the remaining dependencies:
+Install a PyTorch build compatible with your CUDA environment, then install the remaining dependencies:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 
-# Example for CUDA 12.8. Adjust for your system.
+# Example for CUDA 12.8
 pip install torch==2.8.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu128
 pip install -r requirements.txt
 ```
 
-A CUDA GPU is required by the current end-to-end reference script. The projection unit tests are CPU-only.
-
-Run the lightweight tests from the repository root:
+Run the CPU-only core tests from the repository root:
 
 ```bash
 pytest -q
 ```
 
-## Data preparation
+## Executable validation example
 
-The minimal example uses four Common Voice 15.0 locales:
+The compact example uses Common Voice 15.0 with:
 
 ```text
 old languages: fy-NL, tr, ja
 current language: ia
+backbone: Whisper-small
+seed: 2027
 ```
 
-Arrange each locale as follows:
+Expected data layout:
 
 ```text
 data/cv15/
@@ -154,9 +138,7 @@ data/cv15/
 └── ia/
 ```
 
-The repository does not redistribute Common Voice audio. Please obtain the dataset under its original terms.
-
-Generate the deterministic micro manifest:
+Generate the validation manifest:
 
 ```bash
 python scripts/prepare_cv15_subset.py \
@@ -165,11 +147,7 @@ python scripts/prepare_cv15_subset.py \
   --output experiment/manifests/micro_panel_seed2027.jsonl
 ```
 
-**Important:** generated manifests may contain machine-specific audio paths. Keep them out of Git, or regenerate them locally.
-
-## Run the minimal ER → CGMR experiment
-
-You can use a local Whisper-small directory or a Hugging Face model identifier supported by `from_pretrained`.
+Run the ER → CGMR pipeline:
 
 ```bash
 python scripts/run_er_cgmr_micro.py \
@@ -179,122 +157,33 @@ python scripts/run_er_cgmr_micro.py \
   --output-dir experiment/output
 ```
 
-The script performs:
+The validation path covers comparator training, adaptation, beam candidate extraction, state-A selection, language-level projection, CGMR amortization, and endpoint evaluation.
+
+## Paper-scale experimental protocol
+
+The manuscript evaluates CGMR primarily with Whisper-small and additionally with OWSM v3.1-small and SeamlessM4T-v2-Large. The released protocol records the settings stated in the manuscript together with implementation-level settings available from archived experiment assets.
+
+Key paper-level settings include:
 
 ```text
-build/load Whisper-small + LoRA
-        ↓
-train comparator C on old-language samples
-        ↓
-evaluate C and cache comparator repair errors
-        ↓
-experience replay adaptation
-        ↓
-beam-8 decoding on the old-language repair pool
-        ↓
-select state-A samples
-        ↓
-solve language-level CGMR projection by bisection
-        ↓
-amortize projected targets + current-language CE
-        ↓
-evaluate ER and ER→CGMR endpoints
+continual adaptation: LoRA
+default beam size: 8
+default length penalty: 0
+reporting: mean ± standard deviation across five seeds
+CL-MASR old metric: mER
+CL-MASR current metric: WER
+FLEURS metric: WER
+CGMR old/current sampling: 1/2 + 1/2
+inference: single repaired recognizer; no comparator or reranking
 ```
 
-## Main output files
+See `docs/HYPERPARAMETERS.md` for the full protocol table, including archived implementation settings such as optimizer, learning rates, update counts, LoRA configuration, and construction-pool sizes where supported by the available experiment records.
 
-The run directory contains, among others:
+## Reproducibility scope
 
-```text
-experiment/output/
-├── C_endpoint.json
-├── ER_endpoint.json
-├── ER_to_CGMR_endpoint.json
-├── ER_to_CGMR_targets.json
-├── final_summary.json
-├── paired_uncertainty.json
-├── predictions_seed2027.csv
-├── training_history.json
-├── run.log
-└── adapters/
-```
+This repository releases the method code, evaluation protocol, reported paper metrics, and a runnable implementation check. Exact numerical reproduction of large multilingual ASR experiments can depend on dataset revisions, model revisions, manifests, checkpoints, and software/hardware environment. The repository therefore records available provenance separately from the compact executable example.
 
-`ER_to_CGMR_targets.json` is useful for inspecting the actual state-A cohort, beam candidates, language-level `lambda`, comparator budget, and projected candidate posterior.
-
-## Minimal validation configuration
-
-The bundled sanity-check configuration uses approximately the following setup:
-
-```text
-seed: 2027
-backbone: Whisper-small
-LoRA rank / alpha / dropout: 8 / 16 / 0
-beam size: 8
-max new tokens: 64
-old languages: fy-NL, tr, ja
-current language: ia
-comparator steps: 128
-ER steps: 64
-CGMR steps: 16
-adaptation LR: 1e-4
-repair LR: 1.25e-5
-```
-
-This configuration is deliberately smaller than the manuscript experiments.
-
-## Relation to the paper experiments
-
-The paper evaluates the forgetting process and CGMR on CL-MASR and FLEURS, primarily with Whisper-small, and also reports cross-backbone experiments with OWSM v3.1-small and SeamlessM4T-v2-Large. The manuscript's default beam size is 8 with zero length penalty, and reported results are mean ± standard deviation across five seeds.
-
-The exact values printed in the submitted paper are archived under `paper_results/`. See `docs/HYPERPARAMETERS.md` for the distinction between settings stated in the paper and settings that must still be recovered from the final paper-scale run lineage.
-
-The current minimal public implementation should therefore be interpreted as **method code plus an executable sanity check**, not as a claim that every paper table is reproducible from this release.
-
-A full reproduction release should eventually add:
-
-```text
-configs/clmasr_whisper_small.yaml
-configs/fleurs_whisper_small.yaml
-configs/fleurs_owsm_small.yaml
-configs/fleurs_seamlessm4t.yaml
-scripts/diagnose_forgetting.py
-scripts/run_cgmr.py
-scripts/evaluate.py
-scripts/reproduce_table1.sh
-scripts/reproduce_table2.sh
-scripts/reproduce_table3.sh
-```
-
-Only add these entries to the README as runnable commands after the corresponding code, manifests, checkpoints/config lineage, and expected outputs have been verified.
-
-## Reproducibility notes
-
-The reference implementation uses deterministic seeds and performs a small repeated-decoding consistency check before training. The exact numerical result can still depend on GPU, CUDA, PyTorch, Transformers, dataset release, and generated manifest.
-
-For a scientific release, record at least:
-
-- Git commit.
-- Python/package versions.
-- GPU/CUDA versions.
-- Dataset release and manifest hash.
-- Model identifier/revision.
-- Random seed.
-- Beam size and generation limit.
-- Tokenization and normalization rules.
-- LoRA target modules and trainable parameter count.
-- Checkpoint hashes for results reported in the paper.
-
-## Known limitations of the minimal release
-
-- It is a single-seed micro experiment, not the paper's multi-seed benchmark reproduction.
-- It uses a public Common Voice 15.0 subset rather than the manuscript's original CL-MASR experiment cohort.
-- It contains ER → CGMR validation, but does not yet expose the complete paper-scale temporal `tau_rec` / `tau_loss` analysis pipeline.
-- It does not yet provide verified FLEURS, OWSM, or SeamlessM4T training/evaluation entry points.
-- It should not be used to regenerate the paper's main tables until the original experiment lineage is restored and checked.
-
-## Data and model licenses
-
-This repository contains code only unless explicitly stated otherwise. Common Voice, Whisper, OWSM, SeamlessM4T, and other third-party assets remain subject to their original licenses and terms. No third-party dataset or base-model weights should be redistributed through this repository without checking those terms.
+Third-party datasets and base-model weights remain subject to their original licenses and are not redistributed here.
 
 ## Citation
 
@@ -303,11 +192,11 @@ If you use this code, please cite the accompanying manuscript:
 > Peihong Zhang, Mingzhuo Zhou, Shuyu Li, and Shengchen Li.  
 > **When Recognition Fails Before Competitive Hypotheses Disappear: Rethinking Catastrophic Forgetting in Continual Multilingual ASR.**
 
-Formal conference/BibTeX metadata should be added here once the bibliographic record is finalized.
+Formal proceedings metadata can be added after publication.
 
 ## License
 
-The bundled `LICENSE` currently states **all rights reserved**; it does not grant an open-source license. Replace it with the license chosen by the repository owners before advertising the project as open source. Third-party datasets and models remain subject to their original terms.
+The current `LICENSE` permits inspection and research reproducibility but does not grant a permissive open-source license. Third-party datasets and models remain subject to their original terms.
 
 ## Contact
 

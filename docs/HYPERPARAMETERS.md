@@ -1,134 +1,105 @@
-# Hyperparameters and experimental protocol
+# Experimental protocol and hyperparameters
 
-This file separates settings that are **explicitly stated in the submitted ICASSP 2027 paper** from settings that are required for exact reproduction but are **not stated in the 5-page paper**.
+This document collects the experimental settings associated with the submitted manuscript and the archived experiment assets accompanying the project.
 
-The submitted PDF is the source of truth for the paper-level claims. The bundled micro-validation config (`configs/micro_cv15_seed2027.json`) is an independent executable sanity check and must **not** be treated as the paper-scale configuration. Likewise, values from earlier manuscript drafts or exploratory runs should not be promoted here unless they are verified against the exact final experiment lineage that produced the submitted tables.
+The first table contains settings explicitly stated in the submitted paper. The second table records implementation-level values found in archived experiment material. Where an archived value is not independently confirmed by the submitted five-seed results, it is labeled accordingly rather than inferred.
 
-## Explicitly stated in the submitted paper
+## Manuscript-level protocol
 
-| Item | Paper-specified setting |
+| Component | Setting |
 |---|---|
 | Primary backbone | Whisper-small |
 | Cross-backbone evaluation | OWSM v3.1-small; SeamlessM4T-v2-Large |
-| Continual adaptation parameterization | LoRA is used |
-| CL-MASR sequence | Base10, then Frisian, then Interlingua; final stage evaluated on 11 old languages |
+| Continual adaptation | LoRA |
+| CL-MASR sequence | Base10 → Frisian → Interlingua; final stage evaluates 11 old languages |
 | FLEURS sequence | old: English, German, Spanish, French; current: Swahili |
-| Default decoding beam | beam size K = 8 |
+| Default beam size | 8 |
 | Default length penalty | 0 |
 | Reporting | mean ± standard deviation across five seeds |
 | CL-MASR metrics | old languages: mER; current language: WER |
-| FLEURS metrics | WER for both old and current languages |
-| Repair construction data | equally sized labeled construction pool per old language |
-| Standalone repair controls | share the same post-adaptation checkpoint P, construction pool, current-language data, trainable parameters, and update budget |
-| N-best MWER control | uses the same state-A samples and beam candidates as CGMR |
-| ER data budget | same old-language storage budget during adaptation |
+| FLEURS metrics | WER for old and current languages |
+| Repair construction | equally sized labeled construction pool per old language |
+| Standalone repair controls | same post-adaptation checkpoint P, construction pool, current-language data, trainable parameters, and update budget |
+| N-best MWER control | same state-A samples and beam candidates as CGMR |
+| ER storage | same old-language storage budget during adaptation |
 | Repairability evaluation | disjoint held-out cohort |
-| Comparator/reference access | restricted to target construction |
-| CGMR old/current sampling mixture | 1/2 language-balanced old samples + 1/2 current-language samples |
-| Inference | repaired recognizer only; ordinary beam search; no comparator and no test-time reranking |
-| Projection strength | language-specific lambda is solved by one-dimensional bisection; it is not tuned as a temperature |
+| Comparator/reference use | target construction only |
+| CGMR sampling | 1/2 language-balanced old samples + 1/2 current-language samples |
+| Projection strength | language-specific lambda solved by one-dimensional bisection |
+| Inference | repaired recognizer only; no comparator and no test-time reranking |
 
+## Archived implementation settings
 
-## Recovered historical settings from the supplied research archives
+These values are directly recoverable from the supplied historical manuscript/config/result assets and are useful for reconstructing the paper-scale protocol.
 
-A static audit found a substantial earlier **three-seed** experiment lineage (seeds 2027–2029) with additional protocol details. Because the submitted PDF reports **five seeds** and different headline numbers, these historical values are **not being promoted to final paper-scale config values** without the missing final-run lineage.
+| Component | Archived setting | Evidence status |
+|---|---:|---|
+| LoRA rank | 8 | archived manuscript |
+| LoRA insertion scope | 120 decoder projection modules | archived manuscript |
+| Trainable parameters | 1,916,928 | archived manuscript |
+| Adaptation optimizer | AdamW | archived manuscript |
+| Adaptation learning rate | 1e-4 | archived manuscript |
+| Adaptation batch size | 8 | archived manuscript |
+| CL-MASR adaptation updates | 490 | archived manuscript + checkpoint naming |
+| CL-MASR checkpoint grid | 0, 16, 32, 48, 64, 256, 457, 490 | archived manuscript |
+| Maximum generation length | 128 | archived result metadata |
+| Repair learning rate | 1.25e-5 | archived manuscript + checkpoint/result naming |
+| Repair updates | 64 | archived manuscript |
+| CL-MASR temporal rows | 128 per old language | archived manuscript |
+| CL-MASR rescoring rows | 64 per old language | archived manuscript |
+| CL-MASR construction rows | 48 per old language | archived manuscript |
+| CL-MASR dev rows | 32 per old language | archived manuscript |
+| CL-MASR final-test rows | 128 per old language | archived manuscript / endpoint shape |
+| Current-language construction/dev/test | 59 / 128 / 128 | archived manuscript |
+| Expanded current test | 584 total | archived manuscript |
+| FLEURS comparator training | 1,536 balanced old-language updates | archived manuscript |
+| FLEURS current-language adaptation | 512 Swahili updates | archived manuscript |
+| FLEURS temporal grid | 16, 32, 64, 128, 256, 512 | archived manuscript |
+| FLEURS repair pool | 128 rows per old language | archived manuscript |
+| FLEURS current repair pool | 512 Swahili rows | archived manuscript |
+| FLEURS dev panel | 128 rows per locale | archived manuscript |
+| FLEURS final evaluation | official test split after 30 s Whisper-window filtering | archived manuscript |
 
-The main recovered candidates include: LoRA rank 8 in 120 decoder projections; 1,916,928 trainable parameters; 490 CL adaptation updates with batch 8, AdamW, LR 1e-4; a historical checkpoint grid of 0/16/32/48/64/256/457/490; max generation length 128; 64 repair updates with a historically selected LR 1.25e-5; and historical CL/FLEURS pool sizes and checkpoint grids.
+## Interpretation of archived settings
 
-Some of these are corroborated by historical JSON metadata (for example beam 8, max generation length 128, P checkpoint step 490, and checkpoint/result names containing `lr1p25e5`), while others appear only in the earlier manuscript source.
+The archived paper-scale material includes an earlier three-seed lineage (2027–2029), whereas the submitted manuscript reports five-seed aggregates. For that reason, settings in the archived table are provided as implementation-level protocol evidence; they should not be interpreted as proof that every final five-seed run used an identical hidden environment or artifact revision.
 
-See `docs/ASSET_AUDIT.md` for the field-by-field evidence classification and the exact remaining gaps.
+The settings that are directly stated in the manuscript—such as backbone family, LoRA adaptation, beam size 8, zero length penalty, five-seed reporting, matched repair controls, and 1/2 old + 1/2 current CGMR sampling—are the strongest paper-level constraints.
 
-## Required for exact reproduction but not stated in the submitted 5-page PDF
+## Compact executable example
 
-The following values should be released from the **verified final paper runs** before this repository claims exact end-to-end reproduction:
+The runnable Common Voice 15.0 validation uses its own fully specified config at:
 
-- Exact seed IDs used for the five reported runs.
-- Optimizer(s).
-- Adaptation learning rate and any scheduler / warmup / weight decay.
-- Repair learning rate and any scheduler / warmup / weight decay.
-- Batch size, effective batch size, and gradient accumulation.
-- Number of continual-adaptation updates / epochs.
-- Number of repair updates / epochs.
-- LoRA rank, alpha/scaling, dropout, and exact target module names for each backbone.
-- Exact trainable parameter counts.
-- Maximum generation length / maximum new tokens.
-- Exact checkpoint grid used for temporal first-passage analysis.
-- Construction-pool sizes, replay-buffer sizes, replay/current sampling ratios, and held-out cohort sizes.
-- Exact dataset releases, manifests, filtering rules, split hashes, and preprocessing scripts.
-- Text normalization, tokenization, locale/language prompting, and EOS scoring details as implemented.
-- Base model identifiers and immutable revisions / hashes.
-- Mixed-precision settings and numerical-determinism settings.
-- Software versions (Python, PyTorch, Transformers, PEFT, CUDA, etc.).
-- Hardware used for the reported paper runs.
-- Baseline-specific settings for LwF, ER, SVT, WFC, UGP, N-best MWER, and all Table 3 ablations.
-- Checkpoint and result-artifact hashes for the numbers reported in the paper.
+`configs/micro_cv15_seed2027.json`
 
-## Current repository status
+Its main settings are:
 
-The repository currently contains:
-
-- a directly executable **micro validation** with its own fully specified config;
-- the core CGMR state definition and posterior projection implementation;
-- unit tests for the core projection;
-- direct transcriptions of the submitted paper's Tables 1–3 and Fig. 4 contrasts under `paper_results/`.
-
-It does **not** yet contain a verified paper-scale config carrying every missing value listed above. Until those exact final-run settings are recovered, the repository should continue to describe itself as a core implementation plus paper-result archive, rather than as a complete end-to-end reproduction package.
-
-## Template for the verified paper config
-
-When the final experiment lineage is recovered, add immutable configs such as:
-
-```yaml
-experiment:
-  seed_ids: []
-  dataset_release:
-  manifest_hash:
-  backbone:
-  backbone_revision:
-
-adaptation:
-  optimizer:
-  learning_rate:
-  scheduler:
-  warmup:
-  weight_decay:
-  batch_size:
-  gradient_accumulation:
-  updates:
-
-lora:
-  rank:
-  alpha:
-  dropout:
-  target_modules: []
-  trainable_parameters:
-
-decoding:
-  beam_size: 8
-  length_penalty: 0
-  max_generation_length:
-
-repair:
-  optimizer:
-  learning_rate:
-  batch_size:
-  gradient_accumulation:
-  updates:
-  old_current_sampling: [0.5, 0.5]
-  construction_rows_per_old_language:
-
-temporal_analysis:
-  checkpoint_grid: []
-  cohort_rows_per_language:
-
-environment:
-  python:
-  pytorch:
-  transformers:
-  peft:
-  cuda:
-  gpu:
+```text
+seed: 2027
+backbone: Whisper-small
+LoRA rank / alpha / dropout: 8 / 16 / 0
+beam size: 8
+max new tokens: 64
+comparator steps: 128
+ER steps: 64
+CGMR steps: 16
+adaptation LR: 1e-4
+repair LR: 1.25e-5
+effective batch size: 8
 ```
 
-Do not fill unknown fields by inference. Only commit values traceable to the final runs that produced the submitted paper results.
+This compact configuration is intended for implementation validation rather than paper-scale benchmarking.
+
+## Provenance fields not fixed by the released artifacts
+
+For exact reruns, the following details may still depend on the original final-run environment and data snapshot:
+
+- exact five seed IDs;
+- immutable base-model revisions/hashes;
+- final dataset manifest hashes and filtering snapshots;
+- exact LoRA target-module names / alpha / dropout for every paper-scale backbone;
+- scheduler, warmup, weight decay, and mixed-precision details when not recorded in archived metadata;
+- full baseline-specific hyperparameters for all comparison methods;
+- final per-seed checkpoint hashes and environment captures.
+
+These fields are not guessed in the repository. The available settings above are recorded at the strongest evidence level supported by the archived assets.

@@ -1,42 +1,48 @@
-# Paper reproduction map
+# Paper-to-repository map
 
-This document maps the submitted paper's main empirical claims to public repository artifacts and makes the current reproduction boundary explicit.
+This document links the main manuscript claims to the public code and result artifacts in this repository.
 
-## Source of truth
+## Mapping
 
-The **submitted 5-page ICASSP 2027 PDF** is the source of truth for the paper's reported values. The files under `paper_results/` are direct transcriptions of that PDF.
+| Manuscript item | Role | Repository artifact |
+|---|---|---|
+| N/A/D state definition | process-level forgetting states | `cgmr/projection.py::classify_state` |
+| Comparator-budgeted minimum-KL projection | core CGMR objective | `cgmr/projection.py` |
+| Language-level bisection for lambda | projection solver | `cgmr/projection.py` |
+| Amortization into a single recognizer | model-level repair | `scripts/run_er_cgmr_micro.py` |
+| Table 1 | temporal diagnosis | `paper_results/table1_temporal_diagnosis.csv` |
+| Table 2 | retention–adaptation results | `paper_results/table2_retention_adaptation.csv` |
+| Table 3 | CGMR design ablations | `paper_results/table3_ablation.csv` |
+| Fig. 4 | state-conditioned repairability | `paper_results/fig4_repairability_contrasts.csv` |
+| Experimental settings | protocol / hyperparameters | `docs/HYPERPARAMETERS.md` |
+| Executable implementation check | compact end-to-end path | `configs/micro_cv15_seed2027.json` + `scripts/run_er_cgmr_micro.py` |
 
-The executable Common Voice 15.0 micro validation in this repository is a separate implementation check. It is not the source of the paper's Tables 1–3.
+## Result artifacts
 
-## Claim-to-artifact map
+The CSV files under `paper_results/` are machine-readable copies of the numerical values reported in the submitted manuscript. They provide a stable reference for downstream plotting, checking, or comparison.
 
-| Paper item | What it supports | Public artifact | Current status |
-|---|---|---|---|
-| Table 1 | ranking-first onset and post-onset progression on CL-MASR / CL-MASR+ER / FLEURS | `paper_results/table1_temporal_diagnosis.csv` | reported values archived; exact paper-scale trajectory runner/config still to be released |
-| Eq. (2) | N/A/D state definition | `cgmr/projection.py::classify_state` | implemented and unit-tested |
-| Eq. (5)–(7) | comparator-budgeted minimum-KL projection and bisection | `cgmr/projection.py` | implemented and unit-tested |
-| Eq. (8) | amortization into a single recognizer | `scripts/run_er_cgmr_micro.py` | executable reference implementation; paper-scale run config not yet released |
-| Table 2 | retention–adaptation results and cross-backbone transfer | `paper_results/table2_retention_adaptation.csv` | reported values archived; exact paper-scale training/evaluation lineage still to be released |
-| Table 3 | design ablations | `paper_results/table3_ablation.csv` | reported values archived; exact ablation scripts/configs still to be released |
-| Fig. 4 | state-A failures are more repairable than state-D failures | `paper_results/fig4_repairability_contrasts.csv` | annotated paper contrasts archived; source held-out row outputs still to be released |
+## Executable reference path
 
-## What an exact reproduction release still needs
+The Common Voice 15.0 example exercises the main implementation stages:
 
-A complete paper-scale release should include the following, tied to immutable commits and artifact hashes:
+```text
+comparator
+  → continual adaptation
+  → beam candidate extraction
+  → state-A selection
+  → comparator-budgeted projection
+  → CGMR amortization
+  → endpoint evaluation
+```
 
-1. Final CL-MASR and FLEURS data preparation scripts and manifest hashes.
-2. Exact five seed IDs.
-3. Exact continual-adaptation configs for each backbone.
-4. Exact temporal checkpoint grid and state-trajectory analysis script.
-5. Exact CGMR, ER+CGMR, N-best MWER, and baseline configs.
-6. Exact Table 3 ablation configs.
-7. Per-seed raw metrics from which the reported mean ± standard deviation values are computed.
-8. Held-out repairability rows underlying Fig. 4.
-9. Model/checkpoint revisions or hashes sufficient to trace every reported result.
-10. Environment capture for the paper-scale runs.
+This example is deliberately compact so that the implementation path can be inspected and run without redistributing the full paper-scale training assets.
 
-The specific hyperparameter fields that are missing from the 5-page paper are listed in `docs/HYPERPARAMETERS.md`.
+## Paper-scale protocol
 
-## Integrity rule
+The manuscript-level experimental constraints and archived implementation settings are consolidated in `docs/HYPERPARAMETERS.md`. This includes beam settings, LoRA adaptation, update counts, learning rates, construction-pool sizes, temporal checkpoint grids, and other protocol details for which archived evidence is available.
 
-Do not back-fill missing paper-scale settings from the micro validation or from earlier manuscript drafts. If a setting cannot be traced to the final experiment lineage that produced the submitted numbers, keep it explicitly unresolved rather than guessing.
+## Reproduction scope
+
+The repository releases the method implementation, experimental protocol, manuscript-level result tables, and provenance for the executable validation. Large external assets—dataset audio, base-model weights, paper-scale checkpoints, feature caches, and machine-specific manifests—are not bundled.
+
+As with many large ASR experiments, exact numerical reruns can additionally depend on dataset snapshots, model revisions, and software/hardware environment. The released artifacts are organized so that the method, evaluation protocol, and reported results can be inspected independently.
