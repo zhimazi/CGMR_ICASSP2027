@@ -1,0 +1,38 @@
+{
+  "schema": "cgmr-independent-micro-validation-provenance-v1",
+  "created_local": "2026-09-17 Asia/Shanghai",
+  "seed": 2027,
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "gpu_memory": "8188 MiB",
+    "driver": "591.86"
+  },
+  "software": {
+    "python": "3.12.14",
+    "torch": "2.8.0+cu128",
+    "transformers": "4.56.2",
+    "peft": "0.17.1",
+    "av": "15.1.0",
+    "pandas": "2.3.2",
+    "scipy": "1.16.2",
+    "jiwer": "4.0.0"
+  },
+  "primary_run": {
+    "runtime_seconds": 768.5925667285919,
+    "peak_cuda_allocated_gib": 0.8275933265686035,
+    "seed_count": 1,
+    "resumed": false
+  },
+  "hashes_before_packaging": [
+    {"path": "models/whisper-small/model.safetensors", "size": 966995080, "sha256": "1D7734884874F1A1513ED9AA760A4F8E97AAA02FD6D93A3A85D27B2AE9CA596B"},
+    {"path": "experiment_config.json", "size": 1096, "sha256": "A542D477B50F0DE1F3A68873917D939F7B8E9639CE7ECFBCEDC414B2CB01F542"},
+    {"path": "prepare_cv15_subset.py", "size": 5862, "sha256": "583193710FBC07CBCC9DE39AFC9BDD3764B03F228860EB0886970A492D923D85"},
+    {"path": "run_er_cgmr_micro.py", "size": 33785, "sha256": "AAAD0744A2889211620DF880B11EB3230DC3DC0A475F682CAA317A6A2DFE616D"},
+    {"path": "experiment/manifests/micro_panel_seed2027.jsonl", "size": 286850, "sha256": "DE2B4A42B1836522FBA2FFB03E34E0B3F52EE765422D82A381AF6DDE8B7A530D"},
+    {"path": "experiment/final_output/final_summary.json", "size": 5545, "sha256": "19F9F444B0A56C6DEF699A81830ABE1112DD0C5D2FCFB34018DD0B304E1B86D0"},
+    {"path": "experiment/final_output/predictions_seed2027.csv", "size": 82652, "sha256": "3F63B8C2EAFAEF3B6910D34AB7F5A332B5FE461803539BFE28898D91BA5A054A"},
+    {"path": "experiment/final_output/ER_to_CGMR_targets.json", "size": 352654, "sha256": "5AE7A0D3552D114AB0BCDD39851DF44BE969F487835A7E87311D40DBC94374E3"},
+    {"path": "experiment/final_output/adapters/ER_to_CGMR/adapter_model.safetensors", "size": 7700624, "sha256": "C1771753FCF3AF7ED956B94FB1046AD09E7ECC8FBCC221D07AF9A0ACACF76DB1"}
+  ],
+  "guardrail": "Independent Common Voice 15.0 plausibility check; not an exact reproduction of the unavailable manuscript CV13 cohort/checkpoints."
+}
