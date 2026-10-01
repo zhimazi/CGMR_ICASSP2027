@@ -11,7 +11,9 @@
 | FLEURS sequence | old: English, German, Spanish, French; current: Swahili |
 | Default beam size | 8 |
 | Default length penalty | 0 |
-| Reporting | mean ± standard deviation across five seeds |
+| Reporting | mean ± sample standard deviation across five seeds |
+| Manuscript seed IDs | 2027, 2028, 2029, 2030, 2031 |
+| Seed aggregation | arithmetic mean; sample std with ddof=1 |
 | CL-MASR metrics | old languages: mER; current language: WER |
 | FLEURS metrics | WER for old and current languages |
 | Repair construction | equally sized labeled construction pool per old language |
@@ -21,7 +23,9 @@
 | Comparator/reference use | target construction only |
 | CGMR sampling | 1/2 language-balanced old + 1/2 current language |
 | Projection strength | language-specific lambda solved by one-dimensional bisection |
-| Inference | repaired recognizer only; no comparator or test-time reranking |
+| Inference | repaired recognizer only; no comparator and no test-time reranking |
+
+The machine-readable version of this protocol is `../configs/paper_protocol.json`. Five-seed aggregation can be checked with `../scripts/aggregate_seed_results.py`.
 
 ## Implementation-level reference settings from archived paper-scale runs
 
@@ -53,8 +57,33 @@
 | FLEURS dev panel | 128 rows per locale |
 | FLEURS final evaluation | official test split after 30 s Whisper-window filtering |
 
+## Public reference defaults
+
+The compact executable runner fixes additional engineering defaults so that the implementation path is deterministic and inspectable.
+
+| Component | Setting |
+|---|---:|
+| LoRA alpha | 16 |
+| LoRA dropout | 0 |
+| AdamW betas | (0.9, 0.999) |
+| AdamW epsilon | 1e-8 |
+| AdamW weight decay | 0.01 |
+| Scheduler | constant |
+| Warmup | 0 |
+| Gradient clipping | 5.0 |
+| Mixed precision | fp16 autocast |
+| TF32 | disabled |
+| Flash / memory-efficient SDP | disabled |
+| Deterministic algorithms | enabled where supported |
+
+These defaults describe the released reference implementation. They are recorded separately from manuscript-declared settings so that implementation choices are not confused with paper-level claims.
+
 The compact public runner uses its own explicit configuration in `../configs/micro_cv15_seed2027.json`.
 
 ### Reproduction note
 
-The paper reports five-seed aggregates. Some implementation-level values above are reconstructed from archived paper-scale configuration and result traces rather than a single frozen final-run manifest. They are provided to document the experimental protocol and should not be interpreted as a bitwise-reproduction guarantee across dataset/model revisions or hardware/software environments.
+The manuscript-scale tables report five-seed aggregates. The public micro validation is a separate executable check and does not stand in for the paper-scale seed runs.
+
+Some implementation-level values above are reconstructed from archived paper-scale configuration and result traces rather than a single frozen final-run manifest. They document the experimental protocol and should not be interpreted as a bitwise-reproduction guarantee across dataset/model revisions or hardware/software environments.
+
+See `../REPRODUCIBILITY.md` for the artifact boundary, determinism policy, and five-seed aggregation contract.
