@@ -40,11 +40,11 @@ subject to the comparator-defined aggregate edit budget. The language-specific `
 - **Cross-backbone evaluation:** OWSM v3.1-small and SeamlessM4T-v2-Large
 - **Continual adaptation:** LoRA
 - **Default decoding:** beam size `K=8`, zero length penalty
-- **Reporting:** mean ± standard deviation across five seeds
+- **Paper-scale reporting:** arithmetic mean ± sample standard deviation across five protocol seeds `{2027, 2028, 2029, 2030, 2031}`
 - **CGMR sampling:** 1/2 language-balanced old samples + 1/2 current-language samples
 - **Inference:** repaired recognizer only; no comparator and no test-time reranking
 
-Implementation-level settings and data budgets are collected in [supplementary/hyperparameters.md](supplementary/hyperparameters.md).
+The manuscript-scale protocol is machine-readable in [configs/paper_protocol.json](configs/paper_protocol.json). Implementation-level settings and data budgets are collected in [supplementary/hyperparameters.md](supplementary/hyperparameters.md), and the artifact/reproducibility boundary is documented in [REPRODUCIBILITY.md](REPRODUCIBILITY.md).
 
 ## Main Results
 
@@ -80,20 +80,31 @@ The repository includes additional diagnostics that are useful for interpreting 
 
 See [supplementary/README.md](supplementary/README.md).
 
+## Reproducibility Contract
+
+The repository uses two deliberately separate artifact tiers:
+
+1. **Manuscript-scale protocol and reported aggregates.** The five-seed contract, model/training settings, data budgets, and aggregation semantics are recorded in `configs/paper_protocol.json`. The helper `scripts/aggregate_seed_results.py` refuses to aggregate incomplete or duplicated seed sets.
+2. **Public executable validation.** The Common Voice 15.0 micro path is a compact end-to-end implementation check. It exercises the CGMR pipeline but is not presented as a generator of the manuscript tables.
+
+Large external assets such as dataset audio, upstream model weights, paper-scale checkpoints, feature caches, and machine-specific manifests are not redistributed. See [REPRODUCIBILITY.md](REPRODUCIBILITY.md) for details.
+
 ## Reference Implementation
 
 The public code is intentionally compact:
 
 ```text
 cgmr/
-└── projection.py              # N/A/D states + comparator-budgeted projection
+└── projection.py                 # N/A/D states + comparator-budgeted projection
 
 scripts/
-├── prepare_cv15_subset.py     # compact public validation panel
-└── run_er_cgmr_micro.py       # end-to-end ER → CGMR reference path
+├── prepare_cv15_subset.py        # compact public validation panel
+├── run_er_cgmr_micro.py          # end-to-end ER → CGMR reference path
+└── aggregate_seed_results.py     # strict five-seed reporting utility
 
 configs/
-└── micro_cv15_seed2027.json   # executable reference configuration
+├── micro_cv15_seed2027.json      # executable public reference configuration
+└── paper_protocol.json           # manuscript-scale protocol and reporting contract
 ```
 
 The compact Common Voice validation is provided to make the core algorithm inspectable and executable; the paper-scale numerical results are reported separately in `supplementary/`.
@@ -103,6 +114,7 @@ The compact Common Voice validation is provided to make the core algorithm inspe
 ```text
 CGMR_ICASSP2027/
 ├── README.md
+├── REPRODUCIBILITY.md
 ├── cgmr/
 ├── scripts/
 ├── configs/
