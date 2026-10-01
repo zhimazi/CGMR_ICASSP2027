@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "scope": {
+    "artifact": "manuscript-scale experimental protocol",
+    "paper": "When Recognition Fails Before Competitive Hypotheses Disappear: Rethinking Catastrophic Forgetting in Continual Multilingual ASR",
+    "conference": "ICASSP 2027",
+    "note": "This file records the manuscript-level protocol. It is separate from the compact public micro validation in configs/micro_cv15_seed2027.json."
+  },
+  "reporting": {
+    "seed_count": 5,
+    "seed_ids": [2027, 2028, 2029, 2030, 2031],
+    "aggregation": {
+      "point_estimate": "arithmetic mean across seeds",
+      "dispersion": "sample standard deviation across seeds",
+      "std_ddof": 1,
+      "rounding_decimals": 2
+    }
+  },
+  "primary_model": {
+    "backbone": "openai/whisper-small",
+    "continual_parameterization": "LoRA",
+    "lora_rank": 8,
+    "lora_alpha": 16,
+    "lora_dropout": 0.0,
+    "target_scope": "120 decoder projection modules",
+    "expected_trainable_parameters": 1916928
+  },
+  "optimization": {
+    "adaptation": {
+      "optimizer": "AdamW",
+      "learning_rate": 0.0001,
+      "batch_size": 8,
+      "gradient_clip_norm": 5.0
+    },
+    "repair": {
+      "optimizer": "AdamW",
+      "learning_rate": 0.0000125,
+      "updates": 64,
+      "gradient_clip_norm": 5.0,
+      "old_current_sampling": [0.5, 0.5]
+    },
+    "reference_optimizer_defaults": {
+      "betas": [0.9, 0.999],
+      "eps": 1e-8,
+      "weight_decay": 0.01,
+      "scheduler": "constant",
+      "warmup_steps": 0
+    }
+  },
+  "decoding": {
+    "beam_size": 8,
+    "length_penalty": 0.0,
+    "maximum_generation_length": 128,
+    "test_time_comparator": false,
+    "test_time_reranker": false
+  },
+  "cl_masr": {
+    "sequence": "Base10 -> Frisian -> Interlingua",
+    "final_old_language_count": 11,
+    "adaptation_updates": 490,
+    "checkpoint_grid": [0, 16, 32, 48, 64, 256, 457, 490],
+    "data_budget_per_old_language": {
+      "temporal_rows": 128,
+      "rescoring_rows": 64,
+      "construction_rows": 48,
+      "dev_rows": 32,
+      "final_test_rows": 128
+    },
+    "current_language_budget": {
+      "construction_rows": 59,
+      "dev_rows": 128,
+      "test_rows": 128,
+      "expanded_test_rows": 584
+    },
+    "metric": {
+      "old_languages": "mER",
+      "current_language": "WER"
+    }
+  },
+  "fleurs": {
+    "old_languages": ["English", "German", "Spanish", "French"],
+    "current_language": "Swahili",
+    "comparator_training_updates": 1536,
+    "current_language_adaptation_updates": 512,
+    "checkpoint_grid": [16, 32, 64, 128, 256, 512],
+    "repair_rows_per_old_language": 128,
+    "current_repair_rows": 512,
+    "dev_rows_per_locale": 128,
+    "final_evaluation": "official test split after 30 s Whisper-window filtering",
+    "metric": "WER"
+  },
+  "cgmr": {
+    "state_repaired": "A",
+    "projection": "minimum-KL posterior revision under a comparator-defined aggregate edit budget",
+    "lambda_solver": "language-specific one-dimensional bisection",
+    "comparator_use": "target construction only",
+    "repairability_evaluation": "disjoint held-out cohort"
+  },
+  "public_reference": {
+    "config": "configs/micro_cv15_seed2027.json",
+    "role": "independent executable plausibility check",
+    "paper_table_reproduction": false
+  }
+}
