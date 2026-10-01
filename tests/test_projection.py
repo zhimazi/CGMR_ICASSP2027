@@ -4,6 +4,7 @@ import pytest
 from cgmr.projection import (
     aggregate_expected_edit_risk,
     gibbs_tilt_from_log_scores,
+    project_language_cohort,
     solve_language_lambda,
 )
 
@@ -24,6 +25,19 @@ def test_bisection_meets_language_budget():
     lam = solve_language_lambda(rows, budget)
     assert lam > 0
     assert aggregate_expected_edit_risk(rows, lam) <= budget + 1e-8
+
+
+def test_complete_projection_returns_targets_and_diagnostics():
+    rows = [
+        ([0.0, -0.4, -1.0], [4, 2, 0]),
+        ([0.0, -0.2, -0.8], [3, 1, 0]),
+    ]
+    result = project_language_cohort(rows, comparator_budget=2.0)
+    assert result.lambda_value > 0
+    assert result.risk_before > result.comparator_budget
+    assert result.risk_after <= result.comparator_budget + 1e-8
+    assert len(result.posteriors) == 2
+    assert all(np.isclose(q.sum(), 1.0) for q in result.posteriors)
 
 
 def test_zero_lambda_when_anchor_already_feasible():
