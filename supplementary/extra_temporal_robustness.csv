@@ -1,0 +1,10 @@
+analysis,scope,metric,value,ci_low,ci_high,unit
+native-top state assignment,CL-MASR archived trajectory panel,ranking_first,82.81,79.47,86.01,percent
+finer 0-64 checkpoint grid,CL-MASR archived trajectory panel,ranking_first,82.90,,,percent
+exclude onsets spanning two longest checkpoint intervals,CL-MASR archived trajectory panel,ranking_first,83.76,,,percent
+ranking-first onset,CL-MASR archived trajectory panel,comparator_exact_token_path_in_adapted_beam,57.13,,,percent
+ranking-first onset,CL-MASR archived trajectory panel,comparator_normalized_transcript_in_adapted_beam,69.51,64.88,74.02,percent
+first-event positive edit mass,CL-MASR archived trajectory panel,ranking_share,79.20,74.55,83.95,percent
+ranking-first rows with follow-up,CL-MASR archived trajectory panel,accessible_at_next_checkpoint,88.47,,,percent
+ranking-first rows with follow-up,CL-MASR archived trajectory panel,later_enter_D,30.16,,,percent
+ranking-first rows later entering D,CL-MASR archived trajectory panel,median_observed_delay,201,,,updates

@@ -1,0 +1,4 @@
+scope,update,beam_size,beam_oracle_mER_percent,competitive_candidate_survival_percent,ordinary_1best_mER_percent
+CL-MASR seed2027,490,4,21.71,32.67,26.50
+CL-MASR seed2027,490,8,19.56,46.19,26.44
+CL-MASR seed2027,490,16,17.60,58.29,27.85
