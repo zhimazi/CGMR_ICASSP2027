@@ -539,8 +539,8 @@ def train_cgmr(
         # Obtain the current restricted posterior without retaining eight decoder
         # graphs at once.  For cross-entropy H(q, softmax(s)), the exact score
         # gradient is softmax(s) - q, so each candidate can then be backpropagated
-        # independently.  This is mathematically equivalent and materially lowers
-        # peak memory on an 8 GiB RTX 4060.
+        # independently. This is mathematically equivalent while materially
+        # lowering peak decoder memory.
         with torch.no_grad():
             detached_scores = torch.stack(
                 [
