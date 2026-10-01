@@ -1,42 +1,36 @@
-"""Core state definition and comparator-budgeted posterior projection for CGMR.
+"""Comparator-budgeted minimum-information projection for CGMR.
 
-This module isolates the central math used by the executable micro experiment in
-``scripts/run_er_cgmr_micro.py``.  It is intentionally NumPy-only so the core
-projection can be unit-tested without loading an ASR model.
-
-For candidate log scores s_i(h), candidate edit counts d_i(h), and a language-
-shared multiplier lambda >= 0, the projected posterior is
+For candidate log scores ``s_i(h)``, edit counts ``d_i(h)``, and a
+language-shared multiplier ``lambda >= 0``, CGMR uses
 
     q_i(h) proportional to exp(s_i(h) - lambda * d_i(h)).
 
-The language-level multiplier is chosen so that the aggregate expected edit risk
-does not exceed the comparator edit budget, using one-dimensional bisection.
+The shared multiplier is chosen by monotone bisection so that aggregate
+expected edit risk does not exceed the comparator-defined language budget.
+This module is NumPy-only so the central projection can be inspected and tested
+without loading an ASR model.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 
 import numpy as np
 
 
-def classify_state(
-    baseline_error: float,
-    adapted_1best_error: float,
-    oracle_beam_error: float,
-) -> str:
-    """Return the paper's N/A/D state for one old-language utterance.
+Row = tuple[Sequence[float], Sequence[float]]
 
-    N: adapted 1-best remains comparator-competitive.
-    A: 1-best regresses, but a comparator-competitive candidate remains in beam.
-    D: all comparator-competitive candidates have disappeared from the beam.
-    """
 
-    if adapted_1best_error <= baseline_error:
-        return "N"
-    if oracle_beam_error <= baseline_error:
-        return "A"
-    return "D"
+@dataclass(frozen=True)
+class LanguageProjection:
+    """Result of one language-level CGMR I-projection."""
+
+    lambda_value: float
+    comparator_budget: float
+    risk_before: float
+    risk_after: float
+    posteriors: tuple[np.ndarray, ...]
 
 
 def _as_vector(values: Sequence[float], name: str) -> np.ndarray:
@@ -65,7 +59,7 @@ def gibbs_tilt_from_log_scores(
         raise ValueError("edit_counts must be non-negative")
 
     logits = scores - lam * edits
-    logits = logits - np.max(logits)
+    logits -= np.max(logits)
     weights = np.exp(logits)
     total = float(weights.sum())
     if total <= 0 or not np.isfinite(total):
@@ -73,12 +67,11 @@ def gibbs_tilt_from_log_scores(
     return weights / total
 
 
-def aggregate_expected_edit_risk(
-    rows: Sequence[tuple[Sequence[float], Sequence[float]]],
-    lam: float,
-) -> float:
-    """Return sum_i E_{q_i(lambda)}[d_i(h)] for a language cohort."""
+def aggregate_expected_edit_risk(rows: Sequence[Row], lam: float) -> float:
+    """Return sum_i E_q[d_i(h)] for a language cohort."""
 
+    if not rows:
+        raise ValueError("rows must be non-empty")
     total = 0.0
     for log_scores, edit_counts in rows:
         edits = _as_vector(edit_counts, "edit_counts")
@@ -88,7 +81,7 @@ def aggregate_expected_edit_risk(
 
 
 def solve_language_lambda(
-    rows: Sequence[tuple[Sequence[float], Sequence[float]]],
+    rows: Sequence[Row],
     comparator_budget: float,
     *,
     tol: float = 1e-10,
@@ -97,9 +90,8 @@ def solve_language_lambda(
 ) -> float:
     """Solve the language-level CGMR multiplier by monotone bisection.
 
-    Returns 0 when the anchor posterior already satisfies the comparator budget.
-    Raises ValueError when the requested budget is infeasible for the supplied
-    candidate sets.
+    Returns zero when the anchor posterior is already feasible. The candidate
+    support must make the comparator budget attainable.
     """
 
     if not rows:
@@ -124,8 +116,7 @@ def solve_language_lambda(
             f"budget={comparator_budget:.12g}"
         )
 
-    low = 0.0
-    high = 1.0
+    low, high = 0.0, 1.0
     while aggregate_expected_edit_risk(rows, high) > comparator_budget + tol:
         high *= 2.0
         if high > max_bracket:
@@ -133,12 +124,32 @@ def solve_language_lambda(
 
     for _ in range(max_bisection_steps):
         mid = (low + high) / 2.0
-        risk = aggregate_expected_edit_risk(rows, mid)
-        if risk > comparator_budget:
+        if aggregate_expected_edit_risk(rows, mid) > comparator_budget:
             low = mid
         else:
             high = mid
         if high - low <= tol * max(1.0, high):
             break
-
     return high
+
+
+def project_language_cohort(
+    rows: Sequence[Row],
+    comparator_budget: float,
+    *,
+    tol: float = 1e-10,
+) -> LanguageProjection:
+    """Run the complete language-level projection from Eqs. (5)-(7)."""
+
+    lam = solve_language_lambda(rows, comparator_budget, tol=tol)
+    posteriors = tuple(
+        gibbs_tilt_from_log_scores(log_scores, edit_counts, lam)
+        for log_scores, edit_counts in rows
+    )
+    return LanguageProjection(
+        lambda_value=lam,
+        comparator_budget=float(comparator_budget),
+        risk_before=aggregate_expected_edit_risk(rows, 0.0),
+        risk_after=aggregate_expected_edit_risk(rows, lam),
+        posteriors=posteriors,
+    )
