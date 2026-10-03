@@ -1,12 +1,21 @@
-Copyright (c) 2026 Peihong Zhang, Mingzhuo Zhou, Shuyu Li, and Shengchen Li.
-All rights reserved.
+MIT License
 
-This repository is currently distributed for inspection and research reproducibility.
-No open-source license is granted by this file.
+Copyright (c) 2026 Peihong Zhang, Mingzhuo Zhou, Shuyu Li, and Shengchen Li
 
-Before adopting a permissive open-source license (for example MIT, BSD-3-Clause,
-or Apache-2.0), the repository owners should confirm the intended licensing terms
-and replace this file accordingly.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-Third-party datasets, models, and software remain subject to their own licenses and
-terms. This repository does not grant rights to those third-party assets.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
