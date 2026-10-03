@@ -140,7 +140,7 @@ CGMR_ICASSP2027/
 │   ├── prepare_cv15_subset.py
 │   └── run_er_cgmr_micro.py
 ├── configs/
-│   └── micro_cv15_seed2027.json
+│   └── micro_cv15_example.json
 ├── tests/
 ├── requirements.txt
 ├── CITATION.cff
