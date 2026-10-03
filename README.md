@@ -2,28 +2,79 @@
 
 Reference implementation for **“When Recognition Fails Before Competitive Hypotheses Disappear: Rethinking Catastrophic Forgetting in Continual Multilingual ASR”** (ICASSP 2027 submission).
 
-CGMR is built around a process view of forgetting: under finite-beam decoding, old-language recognition can regress before competitive hypotheses disappear. That intermediate, **ranking-accessible** state creates a repair window in which the model still contains useful alternatives but ranks them incorrectly.
-
 ## Abstract
 
-Catastrophic forgetting in continual multilingual ASR is usually measured through degradation of the final 1-best prediction. CGMR separates two events that endpoint metrics conflate: **recognition regression** and **loss of comparator-competitive hypotheses from the beam**. When regression occurs first, the adapted recognizer enters a ranking-accessible state in which useful old-language candidates remain available but are misranked.
+**CGMR studies catastrophic forgetting in continual multilingual ASR through the evolution of the model’s hypothesis space, rather than only through endpoint error degradation.**
 
-**Comparator-Guided Minimum-Information Repair (CGMR)** repairs this state without replacing the adapted model's candidate support. The pre-adaptation comparator supplies a reference error boundary, while candidates and their anchor scores come from the adapted recognizer itself. CGMR then finds the KL-nearest posterior that satisfies the comparator-defined language-level edit budget and amortizes the projected targets back into a single recognizer. After repair, the comparator and candidate lists are discarded: inference uses ordinary beam search with no test-time reranker.
+Under finite-beam decoding, recognition can fail before competitive old-language hypotheses disappear: the adapted model may still contain a comparator-competitive candidate in its beam, but rank a higher-error hypothesis above it. We call this the **ranking-accessible** regime.
 
-Experiments in the accompanying paper study this process on CL-MASR and FLEURS and evaluate the repair across heterogeneous multilingual ASR backbones.
+**Comparator-Guided Minimum-Information Repair (CGMR)** targets this regime by projecting the adapted candidate posterior under a comparator-defined edit budget while minimizing its KL deviation from the adapted model. The projected targets are then amortized back into the recognizer, so inference uses ordinary beam search with **no comparator and no test-time reranking**.
+
+Experiments on CL-MASR and FLEURS show that ranking-first forgetting is common and that ranking-accessible failures are substantially more repairable than failures after competitive-candidate loss.
 
 ## Highlights
 
-- **Process diagnosis, not endpoint-only forgetting.** The code explicitly separates recognition regression from competitive-candidate loss through N/A/D states and observed-grid first passage.
-- **A repair window with intact support.** CGMR targets state **A**, where 1-best recognition has regressed but a comparator-competitive alternative is still accessible.
-- **Comparator as a boundary, not a reranker.** The comparator contributes the risk budget; candidates and their native ordering come from the adapted model.
-- **Minimum-information revision.** The target posterior is the KL-nearest feasible projection under a language-level edit constraint.
-- **No tuned repair temperature.** The language multiplier is determined by the comparator budget through monotone one-dimensional bisection.
-- **Model-level repair.** Projected targets are amortized into the recognizer, so deployment requires neither comparator access nor test-time reranking.
+- **A process view of forgetting.** CGMR separates recognition regression from competitive-hypothesis loss instead of treating all endpoint degradation as the same failure.
+- **Ranking-accessible failures.** Old-language recognition can degrade while comparator-competitive hypotheses remain inside the adapted model’s beam.
+- **Minimum-information repair.** CGMR performs a language-level KL projection under a comparator-defined edit budget rather than directly minimizing expected edit risk.
+- **Model-level amortization.** The repaired posterior is amortized back into the recognizer; inference requires neither the comparator nor a test-time reranker.
+- **State-conditioned repairability.** Ranking-accessible failures are markedly more recoverable than failures after competitive candidates have disappeared.
+- **Backbone transfer.** The same repair principle is evaluated with Whisper-small, OWSM v3.1-small, and SeamlessM4T-v2-Large.
+
+## Method at a Glance
+
+For an old-language utterance, the pre-adaptation comparator defines the reference error boundary `b_i`. The adapted recognizer is then diagnosed from its own finite beam:
+
+- **N — comparator-competitive:** the adapted 1-best is no worse than the comparator.
+- **A — ranking-accessible:** the adapted 1-best has regressed, but a comparator-competitive alternative is still present in the beam.
+- **D — candidate loss:** no comparator-competitive candidate remains accessible.
+
+CGMR targets **state A**: the failure has occurred at the ranking level, while useful support is still available.
+
+```text
+pre-adaptation comparator C
+        │
+        └── baseline error boundary b_i
+
+adapted recognizer P
+        │
+        ├── beam candidates S_i
+        ├── N / A / D diagnosis
+        └── retain state-A samples
+                    │
+                    ▼
+            anchor posterior p_i
+                    │
+                    ▼
+      comparator-budgeted KL projection
+                    │
+                    ▼
+             repaired target q_i*
+                    │
+                    ▼
+          amortize back into model
+                    │
+                    ▼
+           ordinary beam decoding
+```
+
+The comparator is used as a **boundary, not a reranker**: candidates and anchor scores come from the adapted recognizer, while the comparator supplies the edit budget used to construct the repair target.
+
+## Core Projection
+
+For each old-language cohort, CGMR solves the minimum-information projection
+
+```text
+q_i*(h) ∝ p_i(h) exp(-lambda_l d_i(h))
+```
+
+subject to the comparator-defined language-level edit budget. The shared `lambda_l` is determined by monotone one-dimensional bisection; it is not a tuned repair temperature.
+
+After projection, the repaired old-language targets are fitted jointly with current-language supervision, producing a single recognizer for ordinary inference.
 
 ## Method in Code
 
-The repository is organized around the paper's conceptual steps rather than around experiment-specific run folders.
+The repository follows the paper’s conceptual structure rather than experiment-specific run folders.
 
 | Paper concept | Implementation |
 |---|---|
@@ -33,25 +84,27 @@ The repository is organized around the paper's conceptual steps rather than arou
 | Language-level comparator budget | `cgmr/projection.py::project_language_cohort` |
 | Monotone solution for the shared multiplier | `cgmr/projection.py::solve_language_lambda` |
 | Amortization on the fixed candidate support | `cgmr/objective.py::restricted_target_cross_entropy` |
-| Memory-efficient exact score gradient | `cgmr/objective.py::restricted_score_gradient` |
+| Exact score-gradient form | `cgmr/objective.py::restricted_score_gradient` |
 
-The central projection is
+## Key Results
 
-```text
-q_i*(h) ∝ p_i(h) exp(-lambda_l d_i(h))
-```
+| Observation | Result |
+|---|---:|
+| Ranking-first onset — CL-MASR | **82.86%** |
+| Ranking-first onset — FLEURS | **86.73%** |
+| State-A vs. state-D complete-repair gap with CGMR | **+21.96 pp** |
 
-where the shared `lambda_l` is chosen so that the language-level expected edit risk meets the comparator-defined budget.
+See the paper for the complete retention–adaptation comparisons, ablations, temporal analyses, and cross-backbone results.
 
 ## Minimal Example
 
-A model-free example demonstrates the two central operations—state diagnosis and language-level projection:
+A model-free example demonstrates state diagnosis and the language-level projection without loading an ASR backbone:
 
 ```bash
 python examples/minimal_cgmr.py
 ```
 
-The core projection code is NumPy-only and can be inspected or unit-tested without loading an ASR backbone.
+The core projection code is NumPy-only, making the central method easy to inspect and unit-test independently of a speech model.
 
 ## Optional ASR Reference Path
 
