@@ -1,9 +1,0 @@
-control,scope,metric,value,unit
-dense_decoder,CL-MASR seed2027,same_stream_learning_rate_and_updates,1,boolean
-dense_decoder,CL-MASR seed2027,trainable_decoder_parameters,153600000,count
-dense_decoder,CL-MASR seed2027,support_loss_by_update16,76.42,percent
-dense_decoder,CL-MASR seed2027,final_rank_first_count,79,count
-dense_decoder,CL-MASR seed2027,final_support_first_count,603,count
-dense_decoder,CL-MASR seed2027,final_censored_count,22,count
-dense_decoder,CL-MASR seed2027,ranking_first_among_observed_onsets,11.63,percent
-dense_decoder,CL-MASR seed2027,ranking_share_first_event_positive_edit_mass,5.53,percent

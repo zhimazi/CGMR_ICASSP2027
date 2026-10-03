@@ -23,6 +23,10 @@ from scipy.signal import resample_poly
 from transformers import WhisperForConditionalGeneration, WhisperProcessor
 from transformers.generation.utils import GenerationMixin
 
+from cgmr.objective import restricted_score_gradient, restricted_target_cross_entropy
+from cgmr.projection import project_language_cohort
+from cgmr.states import classify_state
+
 
 LOCALE_TOKENS = {
     "fy-NL": "<|fy-nl|>",
@@ -424,12 +428,6 @@ def beam_candidates(model, processor, record: dict, cache_dir: Path, config: dic
     return sorted(dedup.values(), key=lambda x: x["raw_log_score"], reverse=True)
 
 
-def softmax(values: np.ndarray) -> np.ndarray:
-    shifted = values - np.max(values)
-    exp = np.exp(shifted)
-    return exp / exp.sum()
-
-
 def build_cgmr_targets(
     model,
     processor,
@@ -447,6 +445,7 @@ def build_cgmr_targets(
         budget = comparator_rows[record["id"]]["edits"]
         top_edits = candidates[0]["edits"]
         oracle_edits = min(c["edits"] for c in candidates)
+        state = classify_state(budget, top_edits, oracle_edits)
         row = {
             "id": record["id"],
             "language": record["language"],
@@ -454,7 +453,8 @@ def build_cgmr_targets(
             "comparator_budget_edits": budget,
             "er_top_edits": top_edits,
             "er_oracle_edits": oracle_edits,
-            "diagnosed": bool(top_edits > budget and oracle_edits <= budget),
+            "state": state,
+            "diagnosed": state == "A",
             "candidates": candidates,
         }
         all_rows.append(row)
@@ -469,41 +469,22 @@ def build_cgmr_targets(
     lambdas = {}
     for lang, rows in by_language.items():
         budget = float(sum(r["comparator_budget_edits"] for r in rows))
-
-        def risk(lam: float) -> float:
-            total = 0.0
-            for r in rows:
-                scores = np.array([c["raw_log_score"] for c in r["candidates"]], dtype=np.float64)
-                edits = np.array([c["edits"] for c in r["candidates"]], dtype=np.float64)
-                q = softmax(scores - lam * edits)
-                total += float(q @ edits)
-            return total
-
-        if risk(0.0) <= budget:
-            lam = 0.0
-        else:
-            high = 1.0
-            while risk(high) > budget and high < 1e6:
-                high *= 2.0
-            low = 0.0
-            for _ in range(80):
-                mid = (low + high) / 2.0
-                if risk(mid) > budget:
-                    low = mid
-                else:
-                    high = mid
-            lam = high
+        projection_rows = [
+            (
+                [c["raw_log_score"] for c in r["candidates"]],
+                [c["edits"] for c in r["candidates"]],
+            )
+            for r in rows
+        ]
+        projection = project_language_cohort(projection_rows, budget)
         lambdas[lang] = {
-            "lambda": lam,
-            "budget_edits": budget,
-            "risk_at_zero": risk(0.0),
-            "projected_risk": risk(lam),
+            "lambda": projection.lambda_value,
+            "budget_edits": projection.comparator_budget,
+            "risk_at_zero": projection.risk_before,
+            "projected_risk": projection.risk_after,
             "rows": len(rows),
         }
-        for r in rows:
-            scores = np.array([c["raw_log_score"] for c in r["candidates"]], dtype=np.float64)
-            edits = np.array([c["edits"] for c in r["candidates"]], dtype=np.float64)
-            q = softmax(scores - lam * edits)
+        for r, q in zip(rows, projection.posteriors):
             r["target_q"] = q.tolist()
             r["target_expected_length"] = float(
                 q @ np.array([max(1, len(c["token_ids"])) for c in r["candidates"]])
@@ -558,8 +539,8 @@ def train_cgmr(
         # Obtain the current restricted posterior without retaining eight decoder
         # graphs at once.  For cross-entropy H(q, softmax(s)), the exact score
         # gradient is softmax(s) - q, so each candidate can then be backpropagated
-        # independently.  This is mathematically equivalent and materially lowers
-        # peak memory on an 8 GiB RTX 4060.
+        # independently. This is mathematically equivalent while materially
+        # lowering peak decoder memory.
         with torch.no_grad():
             detached_scores = torch.stack(
                 [
@@ -569,14 +550,16 @@ def train_cgmr(
                     for c in target["candidates"]
                 ]
             )
-            log_pi = torch.log_softmax(detached_scores, dim=0)
-            pi = torch.softmax(detached_scores, dim=0)
         q = torch.tensor(target["target_q"], dtype=torch.float32, device=device)
         expected_length = max(target["target_expected_length"], 1.0)
-        old_loss = -(q * log_pi).sum() / expected_length
+        old_loss = restricted_target_cross_entropy(
+            detached_scores, q, normalizer=expected_length
+        )
 
         optimizer.zero_grad(set_to_none=True)
-        coefficients = (pi - q) / expected_length
+        coefficients = restricted_score_gradient(
+            detached_scores, q, normalizer=expected_length
+        )
         for coefficient, candidate in zip(coefficients, target["candidates"]):
             score = differentiable_sequence_score(
                 model, old_features, candidate["token_ids"], candidate["prompt_length"]

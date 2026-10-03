@@ -1,3 +1,0 @@
-method,stateA_minus_stateD_complete_repair_rate_pp,definition
-N-best MWER,13.56,"complete repair = freshly decoded 1-best error <= comparator baseline error b_i"
-CGMR,21.96,"complete repair = freshly decoded 1-best error <= comparator baseline error b_i"
